@@ -100,7 +100,7 @@ export function SessionsTable() {
                 {session.uploaded ? (
                   <Badge variant="secondary" className="flex items-center space-x-1">
                     <Check className="h-4 w-4" />
-                    <span>Uploaded</span>
+                    <span>Uploaded {session.blobId}</span>
                   </Badge>
                 ) : (
                   <Button

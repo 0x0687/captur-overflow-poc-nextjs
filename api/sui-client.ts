@@ -32,3 +32,10 @@ export const getSuiClient = () => {
     }
     return client;
 }
+
+export const getClientSuiClient = () => {
+    const network = process.env.NEXT_PUBLIC_NETWORK as 'mainnet' | 'testnet' | 'devnet' | 'localnet';
+    return new SuiClient({
+        url: getFullnodeUrl(network)
+    });
+}

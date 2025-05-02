@@ -7,7 +7,7 @@ import React, {
     useContext,
     ReactNode,
 } from 'react'
-import { uploadSessionAction } from '@/app/actions';
+import { uploadSessionDetailedAction } from '@/app/actions';
 
 // Define data shapes
 export interface LocationPoint {
@@ -135,18 +135,18 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
         const session = sessions.find(s => s.id === sessionId)
         if (!session) return
         try {
-            // Fetch the blob back from the object URL
-            const resp = await fetch(session.downloadUrl)
-            const fileBlob = await resp.blob();
+            const file = new Blob([JSON.stringify(session.locations)], { type: 'application/json' })
+            const blobId = await uploadSessionDetailedAction(file);
 
-            const blobId = await uploadSessionAction(fileBlob);
+            if (blobId) {
+                // Update session state
+                setSessions(prev => prev.map(s =>
+                    s.id === sessionId
+                        ? { ...s, uploaded: true, blobId: blobId }
+                        : s
+                ))
+            }
 
-            // Update session state
-            setSessions(prev => prev.map(s =>
-                s.id === sessionId
-                    ? { ...s, uploaded: true, blobId: blobId }
-                    : s
-            ))
         } catch (error) {
             console.error('Upload error:', error)
             alert('Failed to upload session')
