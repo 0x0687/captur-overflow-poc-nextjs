@@ -1,3 +1,4 @@
+import { BlobsTable } from "@/components/blobs-table"
 import { RecordingControls } from "@/components/recording-controls"
 import { SessionsTable } from "@/components/sessions-table"
 import { StatusIndicator } from "@/components/status-indicator"
@@ -32,6 +33,16 @@ export default function LocationTrackerPage() {
           </CardHeader>
           <CardContent>
             <SessionsTable />
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-full">
+          <CardHeader>
+            <CardTitle>My Walrus Blobs</CardTitle>
+            <CardDescription>View walrus blobs for which you are the owner.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BlobsTable />
           </CardContent>
         </Card>
       </div>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Download, Calendar, Clock, Check } from 'lucide-react'   // imported Check icon
 import { Badge } from '@/components/ui/badge'
 import { useLocation } from './providers/location-context-provider'
+import { useCurrentAccount } from '@mysten/dapp-kit'
 
 // Utility to format seconds to HH:MM:SS
 const formatTime = (sec: number) => {
@@ -21,6 +22,7 @@ const formatTime = (sec: number) => {
 export function SessionsTable() {
   const { sessions, isRecording, isPaused, locations, stopRecording, uploadSession } = useLocation()
   const hasOngoing = isRecording || isPaused
+  const currentAccount = useCurrentAccount()
 
   if (!hasOngoing && sessions.length === 0) {
     return (
@@ -100,13 +102,14 @@ export function SessionsTable() {
                 {session.uploaded ? (
                   <Badge variant="secondary" className="flex items-center space-x-1">
                     <Check className="h-4 w-4" />
-                    <span>Uploaded {session.blobId}</span>
+                    <span>Uploaded to Walrus</span>
                   </Badge>
                 ) : (
                   <Button
                     variant="default"
                     size="sm"
                     onClick={() => uploadSession(session.id)}
+                    disabled={!currentAccount}
                   >
                     Upload
                   </Button>

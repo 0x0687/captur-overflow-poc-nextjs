@@ -21,3 +21,36 @@ export function mistToSUI(mist: number) {
 export function formatAddress(address: string) {
   return `${address.slice(0, 5)}...${address.slice(-5)}`
 }
+
+/**
+ * Convert a 256-bit unsigned integer (decimal) into a 43-char Base64URL string.
+ *
+ * @param dec - The U256 value, either as a decimal string or a BigInt.
+ * @returns The URL-safe Base64 representation (no padding).
+ */
+export function u256ToBase64Url(dec: string | bigint): string {
+  // 1) Make sure we have a BigInt
+  const n: bigint = typeof dec === "string" ? BigInt(dec) : dec;
+
+  // 2) Turn it into a hex string, padded to exactly 64 hex chars (32 bytes)
+  let hex = n.toString(16);
+  if (hex.length > 64) {
+    throw new Error("Value exceeds 256 bits");
+  }
+  hex = hex.padStart(64, "0");
+
+  // 3) Build a Buffer (Node.js) from that hex
+  const buf = Buffer.from(hex, "hex"); // length will be 32
+
+  // 4) Reverse for little-endian
+  buf.reverse();
+
+  // 5) Standard Base64, then make it URL-safe and strip '='
+  const b64 = buf.toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+
+  return b64;
+}

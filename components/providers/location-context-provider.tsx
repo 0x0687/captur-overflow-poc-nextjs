@@ -7,7 +7,8 @@ import React, {
     useContext,
     ReactNode,
 } from 'react'
-import { uploadSessionDetailedAction } from '@/app/actions';
+import { uploadSessionAction } from '@/app/actions';
+import { useCurrentAccount } from '@mysten/dapp-kit';
 
 // Define data shapes
 export interface LocationPoint {
@@ -49,6 +50,7 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
     const [locations, setLocations] = useState<LocationPoint[]>([])
     const [sessions, setSessions] = useState<Session[]>([])
     const intervalRef = useRef<NodeJS.Timeout | null>(null)
+    const currentAccount = useCurrentAccount();
 
     // Cleanup on unmount
     useEffect(() => {
@@ -136,7 +138,7 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
         if (!session) return
         try {
             const file = new Blob([JSON.stringify(session.locations)], { type: 'application/json' })
-            const blobId = await uploadSessionDetailedAction(file);
+            const blobId = await uploadSessionAction(file, currentAccount?.address || '');
 
             if (blobId) {
                 // Update session state

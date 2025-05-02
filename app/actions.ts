@@ -1,7 +1,10 @@
 "use server"
+import { publisherClient } from "@/api/publisher/publisher-client";
 import { getSuiClient } from "@/api/sui-client";
 import { getWalrusClient } from "@/api/walrus-client";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+
+
 
 export async function executeTransactionBlock(bytes: string, signature: string) {
     const client = getSuiClient();
@@ -42,27 +45,30 @@ export async function waitForTransaction(digest: string) {
 /**
  * Takes a File or Blob, writes it to Walrus, and returns the new blobId.
  */
-export async function uploadSessionAction(file: Blob): Promise<string> {
-    // convert Browser Blob/File to Uint8Array
-    const arrayBuffer = await file.arrayBuffer();
-    const blobBytes = new Uint8Array(arrayBuffer);
+export async function uploadSessionAction(file: Blob, owner: string): Promise<string | undefined> {
 
-    // ensure key is present
-    if (!process.env.WALRUS_KEYPAIR) {
-        throw new Error('WALRUS_KEYPAIR not set on server');
+
+    const response = await publisherClient.routes.putBlob(
+        {
+            epochs: 1,
+            sendObjectTo: owner,
+            requestBody: file,
+        }
+    );
+
+    if ("alreadyCertified" in response) {
+        return undefined;
     }
-    const keypair = Ed25519Keypair.fromSecretKey(process.env.WALRUS_KEYPAIR);
-
-    const walrusClient = getWalrusClient();
-
-    const { blobId } = await walrusClient.writeBlob({
-        blob: blobBytes,
-        deletable: false,
-        epochs: 1,
-        signer: keypair,
-    });
-
-    return blobId;
+    if ("newlyCreated" in response) {
+        return response.newlyCreated.blobObject.id;
+    }
+    if ("markedInvalid" in response) {
+        throw new Error("Blob marked invalid");
+    }
+    if ("error" in response) {
+        throw new Error("Error uploading blob: " + response.error.error_msg);
+    }
+    throw new Error("Unknown error uploading blob");
 }
 
 /**

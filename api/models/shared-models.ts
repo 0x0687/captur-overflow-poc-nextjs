@@ -30,3 +30,11 @@ export interface DynamicObjectValue<T> {
     name: string;
     value: MoveObject<T>
 }
+
+export interface BlobModel {
+    id: Uid;
+    registered_epoch: number;
+    blob_id: bigint;
+    size: bigint;
+    encoding_type: number;
+}
