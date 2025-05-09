@@ -203,7 +203,7 @@ export function BlobsTable() {
                                             handleSubmitBlob(blob.id.id)
                                         }}
                                     >
-                                        Submit
+                                        Submit To Captur
                                     </Button>
                                     <Button
                                         variant="outline"
