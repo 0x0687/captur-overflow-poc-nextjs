@@ -1,4 +1,5 @@
 import { BlobsTable } from "@/components/blobs-table"
+import LocationTrackerSettings from "@/components/location-tracker-settings"
 import { RecordingControls } from "@/components/recording-controls"
 import { SessionsTable } from "@/components/sessions-table"
 import { StatusIndicator } from "@/components/status-indicator"
@@ -12,7 +13,9 @@ export default function LocationTrackerPage() {
         <p className="text-muted-foreground">Record and manage your location sessions</p>
       </header>
 
-      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-8 md:grid-cols-2">
+        {/* Settings Card */}
+        <LocationTrackerSettings />
         {/* Controls Card */}
         <Card className="col-span-full lg:col-span-1">
           <CardHeader>
@@ -26,10 +29,10 @@ export default function LocationTrackerPage() {
         </Card>
 
         {/* History Card */}
-        <Card className="col-span-full lg:col-span-2">
+        <Card className="col-span-full">
           <CardHeader>
-            <CardTitle>Recording History</CardTitle>
-            <CardDescription>View and manage past sessions</CardDescription>
+            <CardTitle>Sessions In Memory</CardTitle>
+            <CardDescription>View and upload the sessions that are currently residing in memory.</CardDescription>
           </CardHeader>
           <CardContent>
             <SessionsTable />
@@ -38,8 +41,8 @@ export default function LocationTrackerPage() {
 
         <Card className="col-span-full">
           <CardHeader>
-            <CardTitle>My Walrus Blobs</CardTitle>
-            <CardDescription>View walrus blobs for which you are the owner.</CardDescription>
+            <CardTitle>Recent Walrus Blobs</CardTitle>
+            <CardDescription>View recent walrus blobs for which you are the owner.</CardDescription>
           </CardHeader>
           <CardContent>
             <BlobsTable />

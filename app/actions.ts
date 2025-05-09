@@ -1,10 +1,13 @@
 "use server"
+import { APPROVE_DATA_TARGET, currentPackageId, SUBMIT_DATA_TARGET, SUBSCRIBE_TARGET } from "@/api/constants";
 import { publisherClient } from "@/api/publisher/publisher-client";
 import { getSuiClient } from "@/api/sui-client";
+import { toBase64 } from "@mysten/bcs";
 import { getWalrusClient } from "@/api/walrus-client";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-
-
+import { Transaction } from "@mysten/sui/transactions";
+import { getSealClient } from "@/api/seal-client.";
+import { fromHex, toHex } from '@mysten/sui/utils';
 
 export async function executeTransactionBlock(bytes: string, signature: string) {
     const client = getSuiClient();
@@ -71,86 +74,87 @@ export async function uploadSessionAction(file: Blob, owner: string): Promise<st
     throw new Error("Unknown error uploading blob");
 }
 
-/**
- * Takes a File or Blob, writes it to Walrus, and returns the new blobId.
- */
-export async function uploadSessionDetailedAction(file: Blob): Promise<string> {
-    // convert Browser Blob/File to Uint8Array
-    const arrayBuffer = await file.arrayBuffer();
-    const blobBytes = new Uint8Array(arrayBuffer);
+export async function encryptSessionUsingSeal(file: Blob): Promise<{
+    encryptedObject: Uint8Array;
+    key: Uint8Array;
+}> {
+    const sealClient = getSealClient();
+    const nonce = crypto.getRandomValues(new Uint8Array(5));
+    const fileBytes = await file.bytes();
+    const id = toHex(new Uint8Array([...fileBytes, ...nonce]));
+    return await sealClient.encrypt({
+        threshold: 2,
+        packageId: currentPackageId,
+        id,
+        data: fileBytes
+    });
+}
 
-    // ensure key is present
-    if (!process.env.WALRUS_KEYPAIR) {
-        throw new Error('WALRUS_KEYPAIR not set on server');
-    }
-    const keypair = Ed25519Keypair.fromSecretKey(process.env.WALRUS_KEYPAIR);
-
-    const walrusClient = getWalrusClient();
-    const suiClient = getSuiClient();
-
-    const encoded = await walrusClient.encodeBlob(blobBytes);
-
-    const registerBlobTransaction = await walrusClient.registerBlobTransaction({
-        blobId: encoded.blobId,
-        rootHash: encoded.rootHash,
-        size: blobBytes.length,
-        deletable: true,
-        epochs: 1,
-        owner: keypair.toSuiAddress(),
+export async function buildSubmitDataTransaction(sender: string, blobId: string, age_range: string, gender: string) {
+    const tx = new Transaction();
+    tx.moveCall({
+        target: SUBMIT_DATA_TARGET,
+        arguments: [
+            tx.object(blobId),
+            tx.pure.string(age_range),
+            tx.pure.string(gender)
+        ],
     });
 
-    const { digest } = await suiClient.signAndExecuteTransaction({
-        transaction: registerBlobTransaction,
-        signer: keypair,
+    tx.setSender(sender);
+    const bytes = await tx.build({
+        client: getSuiClient(),
+    });
+    return toBase64(bytes);
+}
+
+export async function buildApproveDataTransaction(sender: string, capturInstanceId: string, processingCapId: string, dataPointId: string, value: number) {
+    const tx = new Transaction();
+    tx.moveCall({
+        target: APPROVE_DATA_TARGET,
+        arguments: [
+            tx.object(capturInstanceId),
+            tx.object(processingCapId),
+            tx.object(dataPointId),
+            tx.pure.u64(value)
+        ],
     });
 
-    const { objectChanges, effects } = await suiClient.waitForTransaction({
-        digest,
-        options: { showObjectChanges: true, showEffects: true },
+    tx.setSender(sender);
+    const bytes = await tx.build({
+        client: getSuiClient(),
     });
+    return toBase64(bytes);
+}
 
-    if (effects?.status.status !== 'success') {
-        throw new Error('Failed to register blob');
-    }
+export async function buildSubscribeTransaction(sender: string, capturInstanceId: string, price: number, coinIds: string[]) {
+    const tx = new Transaction();
 
-    const blobType = await walrusClient.getBlobType();
-
-    const blobObject = objectChanges?.find(
-        (change) => change.type === 'created' && change.objectType === blobType,
-    );
-
-    if (!blobObject || blobObject.type !== 'created') {
-        throw new Error('Blob object not found');
-    }
-
-    const confirmations = await walrusClient.writeEncodedBlobToNodes({
-        blobId: encoded.blobId,
-        metadata: encoded.metadata,
-        sliversByNode: encoded.sliversByNode,
-        deletable: true,
-        objectId: blobObject.objectId,
-    });
-
-    const certifyBlobTransaction = await walrusClient.certifyBlobTransaction({
-        blobId: encoded.blobId,
-        blobObjectId: blobObject.objectId,
-        confirmations,
-        deletable: true,
-    });
-
-    const { digest: certifyDigest } = await suiClient.signAndExecuteTransaction({
-        transaction: certifyBlobTransaction,
-        signer: keypair,
-    });
-
-    const { effects: certifyEffects } = await suiClient.waitForTransaction({
-        digest: certifyDigest,
-        options: { showEffects: true },
-    });
-
-    if (certifyEffects?.status.status !== 'success') {
-        throw new Error('Failed to certify blob');
+    if (coinIds.length < 1) {
+        throw new Error("No coins provided");
     }
 
-    return encoded.blobId;
+    if (coinIds.length > 1) {
+        tx.mergeCoins(
+            tx.object(coinIds[0]),
+            // List of all the other coins
+            coinIds.slice(1).map((coinId) => tx.object(coinId)),
+        );
+    }
+
+    const [paymentCoin] = tx.splitCoins(coinIds[0], [tx.pure.u64(price)]);
+
+    tx.moveCall({
+        target: SUBSCRIBE_TARGET,
+        arguments: [
+            tx.object(capturInstanceId),
+            paymentCoin
+        ],
+    });
+
+    tx.setSender(sender);
+    const bytes = await tx.build({
+        client: getSuiClient(),
+    });
+    return toBase64(bytes);
 }

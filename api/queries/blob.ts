@@ -18,6 +18,7 @@ export const getOwnedBlobs = async (owner: string): Promise<BlobModel[]> => {
             ]
         },
         options: { showType: true, showContent: true },
+        limit: 50
     });
 
     return response.data.map(x => {

@@ -9,6 +9,10 @@ export function formatSuiAmount(amount: number, precision = 2) {
   return (amount / 1e9).toFixed(precision) + " SUI"
 }
 
+export function formatCaptAmount(amount: number, precision = 2) {
+  return (amount / 1e6).toFixed(precision) + " CAPT"
+}
+
 
 export function formatBps(bps: number) {
   return (bps / 100).toFixed(2) + "%"
@@ -53,4 +57,23 @@ export function u256ToBase64Url(dec: string | bigint): string {
 
 
   return b64;
+}
+
+
+export function generateObjectLink(address: string) {
+  const ENV = (process.env.NEXT_PUBLIC_NETWORK as "mainnet" | "devnet" | "testnet" | "localnet");
+  if (ENV === "localnet") {
+    return `https://custom.suiscan.xyz/custom/object/${address}?network=http%3A%2F%2F127.0.0.1%3A9000`;
+  }
+  if (ENV === "mainnet") {
+    return `https://suiscan.xyz/mainnet/object/${address}`;
+  }
+  if (ENV === "devnet") {
+    return `https://suiscan.xyz/devnet/object/${address}`;
+  }
+  if (ENV === "testnet") {
+    return `https://suiscan.xyz/testnet/object/${address}`;
+  }
+  console.error("Invalid network");
+  return "";
 }

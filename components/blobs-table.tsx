@@ -4,46 +4,40 @@ import React, { useEffect, useState } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { getOwnedBlobs } from '@/api/queries/blob'
-import { useCurrentAccount } from '@mysten/dapp-kit'
+import { useCurrentAccount, useSignTransaction } from '@mysten/dapp-kit'
 import { BlobModel } from '@/api/models/shared-models'
-import { u256ToBase64Url } from '@/lib/utils'
+import { formatAddress, generateObjectLink, u256ToBase64Url } from '@/lib/utils'
 import { useLocation } from './providers/location-context-provider'
 import { aggregatorClient } from '@/api/aggregator/aggregator-client'
+import { buildSubmitDataTransaction, executeAndWaitForTransactionBlock } from '@/app/actions'
+import { useLocationTrackerSettings } from './providers/tracker-settings-provider'
+import { Transaction } from '@mysten/sui/transactions'
+import { toast } from 'sonner'
+import { useBlobPopup } from './providers/blob-popup-provider'
+import { getCurrentWalrusEpoch } from '@/api/queries/epoch'
 
-const ENV = (process.env.NEXT_PUBLIC_NETWORK as "mainnet" | "devnet" | "testnet" | "localnet");
-
-export function formatAddress(address: string) {
-    return `${address.slice(0, 5)}...${address.slice(-5)}`
-}
-
-export function generateObjectLink(address: string) {
-    if (ENV === "localnet") {
-        return `https://custom.suiscan.xyz/custom/object/${address}?network=http%3A%2F%2F127.0.0.1%3A9000`;
-    }
-    if (ENV === "mainnet") {
-        return `https://suiscan.xyz/mainnet/object/${address}`;
-    }
-    if (ENV === "devnet") {
-        return `https://suiscan.xyz/devnet/object/${address}`;
-    }
-    if (ENV === "testnet") {
-        return `https://suiscan.xyz/testnet/object/${address}`;
-    }
-    console.error("Invalid network");
-    return "";
-}
 
 export function BlobsTable() {
     const currentAccount = useCurrentAccount()
     const address = currentAccount?.address || "";
     const { sessions } = useLocation();
     const [blobs, setBlobs] = useState<BlobModel[]>([])
+    const [isReading, setIsReading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { ageRange, gender } = useLocationTrackerSettings();
+    const { mutate: signTransaction } = useSignTransaction();
+    const { openBlobPopup: openJsonPopup } = useBlobPopup();
 
     const fetchBlobs = React.useCallback(async () => {
         console.log("Fetching blobs for address:", address)
         if (!address) return
         const owned = await getOwnedBlobs(address)
-        setBlobs(owned)
+        const currentEpoch = await getCurrentWalrusEpoch();
+        // Filter out the blobs from another epoch
+        const filtered = owned.filter(blob => {
+            return blob.registered_epoch === currentEpoch
+        })
+        setBlobs(filtered)
     }, [address])
 
     // run on mount, on account change, and *whenever sessions change*
@@ -68,23 +62,97 @@ export function BlobsTable() {
         )
     }
 
-    const downloadBlob = async (blobId: string) => {
+    // Deposit submission handler
+    async function handleSubmitBlob(blobId: string) {
+        try {
+            setIsSubmitting(true);
+            
+            if (!address) {
+                console.error("Account not found");
+                return;
+            }
+
+            if (!ageRange || !gender) {
+                console.error("Age range or gender not set");
+                return;
+            }
+
+            const bytes = await buildSubmitDataTransaction(
+                address,
+                blobId,
+                ageRange,
+                gender
+            );
+
+            if (!bytes) {
+                console.error("Transaction bytes not found");
+                return;
+            }
+
+
+            const tx = Transaction.from(bytes);
+
+            signTransaction(
+                { transaction: tx },
+                {
+                    onSuccess: (result) => {
+                        executeAndWaitForTransactionBlock(result.bytes, result.signature)
+                            .then(() => {
+                                toast.success("Transaction submitted successfully");
+                                fetchBlobs(); // Reload the blobs after submission
+                            })
+                            .catch((error) => {
+                                console.error("Transaction failed", error);
+                                toast.error("Transaction failed");
+                            })
+                            .finally(() => {
+                            }
+                            );
+                    },
+                    onError: (error) => {
+                        console.error("Error signing transaction:", error);
+                        toast.error("Error signing transaction");
+                    },
+                }
+            );
+        }
+        catch (error) {
+            const errorMsg = error instanceof Error ? error.message : "An unknown error occurred"
+            console.error("Error submitting blob:", errorMsg);
+            toast.error("Error submitting blob: " + errorMsg);
+        }
+        finally {
+            setIsSubmitting(false);
+        }
+
+    }
+
+    // const downloadBlob = async (blobId: string) => {
+    //     const response = await aggregatorClient.routes.getBlob({
+    //         blobId: blobId,
+    //     });
+
+    //     // wrap it in a Blob
+    //     const blob = new Blob([response], { type: "application/octet-stream" });
+
+    //     // create a download link and click it
+    //     const url = URL.createObjectURL(blob);
+    //     const a = document.createElement("a");
+    //     a.href = url;
+    //     a.download = blobId + ".json"; // or whatever you want to name the file
+    //     document.body.appendChild(a);
+    //     a.click();
+    //     document.body.removeChild(a);
+    //     URL.revokeObjectURL(url);
+    // };
+
+    const readBlob = async (blobId: string) => {
+        setIsReading(true);
         const response = await aggregatorClient.routes.getBlob({
             blobId: blobId,
         });
-
-        // wrap it in a Blob
-        const blob = new Blob([response], { type: "application/octet-stream" });
-
-        // create a download link and click it
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = blobId + ".json"; // or whatever you want to name the file
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        setIsReading(false);
+        openJsonPopup(response);
     };
 
     return (
@@ -123,9 +191,9 @@ export function BlobsTable() {
                                     <Button
                                         variant="default"
                                         size="sm"
-                                        disabled
+                                        disabled={!address || !ageRange || !gender || isSubmitting}
                                         onClick={() => {
-                                            // TODO: implement submit logic
+                                            handleSubmitBlob(blob.id.id)
                                         }}
                                     >
                                         Submit
@@ -133,11 +201,12 @@ export function BlobsTable() {
                                     <Button
                                         variant="outline"
                                         size="sm"
+                                        disabled={isReading}
                                         onClick={() => {
-                                            downloadBlob(encoded)
+                                            readBlob(encoded)
                                         }}
                                     >
-                                        Download
+                                        Read
                                     </Button>
                                 </TableCell>
                             </TableRow>

@@ -3,10 +3,11 @@
 import React from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Download, Calendar, Clock, Check } from 'lucide-react'   // imported Check icon
+import { Calendar, Clock, Check, Eye } from 'lucide-react'   // imported Check icon
 import { Badge } from '@/components/ui/badge'
 import { useLocation } from './providers/location-context-provider'
 import { useCurrentAccount } from '@mysten/dapp-kit'
+import { useBlobPopup } from './providers/blob-popup-provider'
 
 // Utility to format seconds to HH:MM:SS
 const formatTime = (sec: number) => {
@@ -20,9 +21,11 @@ const formatTime = (sec: number) => {
 }
 
 export function SessionsTable() {
-  const { sessions, isRecording, isPaused, locations, stopRecording, uploadSession } = useLocation()
+  const { sessions, isRecording, isPaused, locations, stopRecording, uploadSession, isUploading } = useLocation()
   const hasOngoing = isRecording || isPaused
   const currentAccount = useCurrentAccount()
+  const { openBlobPopup: openJsonPopup } = useBlobPopup();
+  
 
   if (!hasOngoing && sessions.length === 0) {
     return (
@@ -91,13 +94,6 @@ export function SessionsTable() {
                 <Badge variant="outline">{session.locations.length} pts</Badge>
               </TableCell>
               <TableCell className="flex items-center space-x-2">
-                {/* Download button */}
-                <Button variant="outline" size="sm" asChild>
-                  <a href={session.downloadUrl} download={`locations-${session.id}.json`}>
-                    <Download className="h-4 w-4 mr-1" />
-                    <span className="hidden sm:inline">Download</span>
-                  </a>
-                </Button>
                 {/* Upload button or checkmark */}
                 {session.uploaded ? (
                   <Badge variant="secondary" className="flex items-center space-x-1">
@@ -109,11 +105,20 @@ export function SessionsTable() {
                     variant="default"
                     size="sm"
                     onClick={() => uploadSession(session.id)}
-                    disabled={!currentAccount}
+                    disabled={!currentAccount || isUploading}
                   >
                     Upload
                   </Button>
                 )}
+                {/* View Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openJsonPopup(JSON.stringify(session.locations, null, 2))}
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">View</span>
+                </Button>
               </TableCell>
             </TableRow>
           ))}

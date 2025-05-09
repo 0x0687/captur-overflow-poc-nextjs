@@ -7,7 +7,7 @@ import React, {
     useContext,
     ReactNode,
 } from 'react'
-import { uploadSessionAction } from '@/app/actions';
+import { encryptSessionUsingSeal, uploadSessionAction } from '@/app/actions';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 
 // Define data shapes
@@ -23,6 +23,9 @@ export interface Session {
     timestamp: string
     locations: LocationPoint[]
     downloadUrl: string
+    encrypted: boolean
+    encryptedBytes?: Uint8Array
+    symmetricKey?: Uint8Array
     uploaded: boolean      // new flag
     blobId?: string        // returned id from Walrus
 }
@@ -31,6 +34,7 @@ export interface Session {
 interface LocationContextProps {
     isRecording: boolean
     isPaused: boolean
+    isUploading: boolean
     locations: LocationPoint[]
     sessions: Session[]
     startRecording: () => void
@@ -46,6 +50,8 @@ const LocationContext = createContext<LocationContextProps | undefined>(undefine
 // Provider component
 export const LocationProvider = ({ children }: { children: ReactNode }) => {
     const [isRecording, setIsRecording] = useState(false)
+    const [isUploading, setIsUploading] = useState(false)
+    const [isEncrypting, setIsEncrypting] = useState(false)
     const [isPaused, setIsPaused] = useState(false)
     const [locations, setLocations] = useState<LocationPoint[]>([])
     const [sessions, setSessions] = useState<Session[]>([])
@@ -127,6 +133,8 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
                 downloadUrl: url,
                 uploaded: false,
                 blobId: undefined,
+                encrypted: false,
+                encryptedBytes: undefined,
             },
             ...prev,
         ])
@@ -137,6 +145,7 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
         const session = sessions.find(s => s.id === sessionId)
         if (!session) return
         try {
+            setIsUploading(true)
             const file = new Blob([JSON.stringify(session.locations)], { type: 'application/json' })
             const blobId = await uploadSessionAction(file, currentAccount?.address || '');
 
@@ -152,6 +161,34 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
         } catch (error) {
             console.error('Upload error:', error)
             alert('Failed to upload session')
+        } finally {
+            setIsUploading(false)
+        }
+    }
+
+    // Encrypt a session with Seal
+    const encryptSession = async (sessionId: string) => {
+        const session = sessions.find(s => s.id === sessionId)
+        if (!session) return
+        try {
+            setIsEncrypting(true)
+            const file = new Blob([JSON.stringify(session.locations)], { type: 'application/json' })
+            const encrypted = await encryptSessionUsingSeal(file);
+
+            if (encrypted) {
+                // Update session state
+                setSessions(prev => prev.map(s =>
+                    s.id === sessionId
+                        ? { ...s, encrypted: true, symmetricKey: encrypted.key, encryptedBytes: encrypted.encryptedObject }
+                        : s
+                ))
+            }
+
+        } catch (error) {
+            console.error('Upload error:', error)
+            alert('Failed to upload session')
+        } finally {
+            setIsUploading(false)
         }
     }
 
@@ -167,6 +204,7 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
                 resumeRecording,
                 stopRecording,
                 uploadSession,
+                isUploading
             }}
         >
             {children}

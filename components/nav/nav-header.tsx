@@ -9,10 +9,13 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { ConnectButton } from "@mysten/dapp-kit"
 
 import '@mysten/dapp-kit/dist/index.css';
+import { useBalance } from "../providers/balance-provider"
+import { formatCaptAmount } from "@/lib/utils"
 
 
 export default function NavHeader() {
-    const [isOpen, setIsOpen] = useState(false)
+    const [isOpen, setIsOpen] = useState(false);
+    const {balance} = useBalance();
 
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -64,19 +67,28 @@ export default function NavHeader() {
                 </div>
 
                 {/* Desktop Navigation */}
-                {/* <nav className="hidden md:flex items-center gap-6">
+                <nav className="hidden md:flex items-center gap-6">
                     <Link href="/" className="text-sm font-medium transition-colors hover:text-primary">
-                        Dashboard
+                        Tracker
                     </Link>
-                    <Link href="/houses" className="text-sm font-medium transition-colors hover:text-primary">
-                        Houses
+                    <Link href="/verification" className="text-sm font-medium transition-colors hover:text-primary">
+                        Verification
                     </Link>
-                    <Link href="/rewards" className="text-sm font-medium transition-colors hover:text-primary">
-                        Rewards
+                    <Link href="/marketplace" className="text-sm font-medium transition-colors hover:text-primary">
+                        Marketplace
                     </Link>
-                </nav> */}
+                </nav>
 
                 <div className="flex items-center gap-4">
+                    {balance != undefined && <div className="inline-flex items-center gap-2 font-medium">
+                        <Image
+                        src={"/captur-icon.avif"}
+                        alt="Captur Logo"
+                        width={32}
+                        height={32}
+                        />
+                        {formatCaptAmount(balance)}
+                    </div>}
                     <ConnectButton />
                 </div>
             </div>
