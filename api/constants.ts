@@ -8,11 +8,15 @@ export const SUBMIT_BLOB_EVENT_TYPE = currentPackageId + "::captur" + "::BlobSub
 export const PROCESS_DATA_EVENT_TYPE = currentPackageId + "::captur" + "::DataProcessedEvent";
 export const CAPTUR_ADMIN_CAP_TYPE = currentPackageId + "::captur" + "::CapturAdminCap";
 export const PROCESSING_CAP_TYPE = currentPackageId + "::captur" + "::ProcessingCap";
+export const SUBSCRIPTION_TYPE = currentPackageId + "::subscription" + "::Subscription";
 
 // === Targets ===
 export const SUBMIT_DATA_TARGET = currentPackageId + "::captur" + "::submit_data";
 export const APPROVE_DATA_TARGET = currentPackageId + "::captur" + "::approve_data";
-export const SUBSCRIBE_TARGET = currentPackageId + "::captur" + "::subscribe";
+export const EXTEND_SUBSCRIPTION_TARGET = currentPackageId + "::captur" + "::subscribe";
+export const NEW_SUBSCRIPTION_TARGET = currentPackageId + "::subscription" + "::new";
+export const VERIFIER_SEAL_APPROVE_TARGET = currentPackageId + "::captur" + "::seal_approve";
+export const SUBSCRIPTION_SEAL_APPROVE_TARGET = currentPackageId + "::subscription" + "::seal_approve";
 
 // === Move Functions ===
 export const SUBMIT_DATA_FUNCTION = {

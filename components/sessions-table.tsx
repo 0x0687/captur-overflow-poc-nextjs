@@ -21,11 +21,11 @@ const formatTime = (sec: number) => {
 }
 
 export function SessionsTable() {
-  const { sessions, isRecording, isPaused, locations, stopRecording, uploadSession, isUploading } = useLocation()
+  const { sessions, isRecording, isPaused, locations, stopRecording, uploadSession, isUploading, encryptSession, isEncrypting } = useLocation()
   const hasOngoing = isRecording || isPaused
   const currentAccount = useCurrentAccount()
   const { openBlobPopup: openJsonPopup } = useBlobPopup();
-  
+
 
   if (!hasOngoing && sessions.length === 0) {
     return (
@@ -95,19 +95,44 @@ export function SessionsTable() {
               </TableCell>
               <TableCell className="flex items-center space-x-2">
                 {/* Upload button or checkmark */}
-                {session.uploaded ? (
-                  <Badge variant="secondary" className="flex items-center space-x-1">
-                    <Check className="h-4 w-4" />
-                    <span>Uploaded to Walrus</span>
-                  </Badge>
+                {session.encrypted && <>
+                  {session.uploaded ? (
+                    <Badge variant="secondary" className="flex items-center space-x-1">
+                      <Check className="h-4 w-4" />
+                      <span>Uploaded to Walrus</span>
+                    </Badge>
+                  ) : (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => uploadSession(session.id)}
+                      disabled={!currentAccount || isUploading}
+                    >
+                      Upload
+                    </Button>
+                  )}
+                </>}
+                {/* Encrypt Button */}
+                {session.encrypted ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const text = new TextDecoder().decode(session.encryptedBytes)
+                      openJsonPopup(text)
+                    }}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    <span className="hidden sm:inline">View Encrypted</span>
+                  </Button>
                 ) : (
                   <Button
                     variant="default"
                     size="sm"
-                    onClick={() => uploadSession(session.id)}
-                    disabled={!currentAccount || isUploading}
+                    onClick={() => encryptSession(session.id)}
+                    disabled={isEncrypting}
                   >
-                    Upload
+                    Encrypt
                   </Button>
                 )}
                 {/* View Button */}
@@ -117,7 +142,7 @@ export function SessionsTable() {
                   onClick={() => openJsonPopup(JSON.stringify(session.locations, null, 2))}
                 >
                   <Eye className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">View</span>
+                  <span className="hidden sm:inline">View Original</span>
                 </Button>
               </TableCell>
             </TableRow>

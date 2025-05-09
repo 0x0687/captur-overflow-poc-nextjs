@@ -2,6 +2,7 @@
 import { VerificationTable } from "@/components/verification-table"
 import { useIsAdmin } from "@/components/providers/admin-context-provider"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import SealSessionKeyManager from "@/components/seal-session-key-manager"
 
 export default function VerificationPage() {
     const isAdmin = useIsAdmin()
@@ -32,7 +33,10 @@ export default function VerificationPage() {
                 </p>
             </header>
 
+
             <div className="grid gap-8 md:grid-cols-2">
+                <SealSessionKeyManager />
+
                 <Card className="col-span-full">
                     <CardHeader>
                         <CardTitle>Recent Data Points</CardTitle>

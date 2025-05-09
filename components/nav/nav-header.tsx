@@ -34,29 +34,29 @@ export default function NavHeader() {
                                 <div className="border-b p-4">
                                     <SheetTitle className="text-lg font-semibold">Navigation</SheetTitle>
                                 </div>
-                                {/* <nav className="flex flex-col p-2">
+                                <nav className="flex flex-col p-2">
                                     <Link
                                         href="/"
                                         className="group flex h-10 w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
                                         onClick={() => setIsOpen(false)}
                                     >
-                                        Dashboard
+                                        Tracker
                                     </Link>
                                     <Link
-                                        href="/houses"
+                                        href="/verification"
                                         className="group flex h-10 w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
                                         onClick={() => setIsOpen(false)}
                                     >
-                                        Houses
+                                        Verification
                                     </Link>
                                     <Link
-                                        href="/rewards"
+                                        href="/marketplace"
                                         className="group flex h-10 w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
                                         onClick={() => setIsOpen(false)}
                                     >
-                                        Rewards
+                                        Marketplace
                                     </Link>
-                                </nav> */}
+                                </nav>
                             </div>
                         </SheetContent>
                     </Sheet>

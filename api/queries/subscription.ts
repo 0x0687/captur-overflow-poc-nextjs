@@ -1,26 +1,36 @@
 "use server"
+import { SUBSCRIPTION_TYPE } from "../constants";
 import { SubscriptionModel } from "../models/captur-models";
-import { DynamicObjectValue } from "../models/shared-models";
 import { getSuiClient } from "../sui-client";
 
 
-
-export const fetchSubscription = async (subscriptionTableId: string, address: string): Promise<SubscriptionModel | undefined> => {
+export const fetchSubscription = async (owner: string): Promise<SubscriptionModel | null> => {
     const client = getSuiClient();
-    // console.log(contextTableId);
-    const response = await client.getDynamicFieldObject({
-        parentId: subscriptionTableId,
-        name: {
-            type: "address",
-            value: address
-        }
+
+    const response = await client.getOwnedObjects({
+        owner: owner,
+        filter: {
+            MatchAny: [
+                {
+                    StructType: SUBSCRIPTION_TYPE
+                }
+            ],
+        },
+        options: {
+            showContent: true
+        },
+        limit: 1
     });
+    const sub = response.data.map(x => {
+        if (x.data?.content?.dataType === "moveObject") {
+            return x.data.content.fields as unknown as SubscriptionModel;
+        }
+        return undefined;
+    })
+    .filter((cap): cap is SubscriptionModel => cap !== undefined);
 
-    if (response.data?.content?.dataType == "moveObject") {
-        console.log(response.data.content.fields);
-        const value = response.data.content.fields as unknown as DynamicObjectValue<SubscriptionModel>;
-        return value.value.fields;
+    if (sub.length > 0) {
+        return sub[0];
     }
-
-    return undefined;
+    return null;
 };

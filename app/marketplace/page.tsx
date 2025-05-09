@@ -2,6 +2,7 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { MarketplaceTable } from "@/components/marketplace-table"
 import SubscriptionCard from "@/components/subscription-card"
+import SealSessionKeyManager from "@/components/seal-session-key-manager"
 
 export default function MarketplacePage() {
 
@@ -17,6 +18,7 @@ export default function MarketplacePage() {
             <div className="grid gap-8 md:grid-cols-2">
                 {/* Subscription Card */}
                 <SubscriptionCard />
+                <SealSessionKeyManager />
                 <Card className="col-span-full">
                     <CardHeader>
                         <CardTitle>Data Points</CardTitle>

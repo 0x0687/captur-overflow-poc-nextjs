@@ -10,6 +10,7 @@ import { LocationTrackerSettingsProvider } from "@/components/providers/tracker-
 import { BlobPopupProvider } from "@/components/providers/blob-popup-provider";
 import { AdminProvider } from "@/components/providers/admin-context-provider";
 import { CapturProvider } from "@/components/providers/captur-context-provider";
+import { SealSessionProvider } from "@/components/providers/seal-session-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,31 +38,33 @@ export default function RootLayout({
   return (
     <html lang="en">
       <SuiClientProviders>
-        <CapturProvider>
-          <BalanceProvider>
-            <AdminProvider>
-              <LocationProvider>
-                <LocationTrackerSettingsProvider>
-                  <body
-                    className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}
-                  >
-                    <BlobPopupProvider>
+        <SealSessionProvider>
+          <CapturProvider>
+            <BalanceProvider>
+              <AdminProvider>
+                <LocationProvider>
+                  <LocationTrackerSettingsProvider>
+                    <body
+                      className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}
+                    >
+                      <BlobPopupProvider>
 
-                      <div className="min-h-screen flex flex-col px-4">
-                        <NavHeader />
-                        <main className="flex-1 container mx-auto">
-                          {children}
-                        </main>
-                      </div>
-                      <Toaster />
-                    </BlobPopupProvider>
+                        <div className="min-h-screen flex flex-col px-4">
+                          <NavHeader />
+                          <main className="flex-1 container mx-auto">
+                            {children}
+                          </main>
+                        </div>
+                        <Toaster />
+                      </BlobPopupProvider>
 
-                  </body>
-                </LocationTrackerSettingsProvider>
-              </LocationProvider>
-            </AdminProvider>
-          </BalanceProvider>
-        </CapturProvider>
+                    </body>
+                  </LocationTrackerSettingsProvider>
+                </LocationProvider>
+              </AdminProvider>
+            </BalanceProvider>
+          </CapturProvider>
+        </SealSessionProvider>
       </SuiClientProviders>
     </html >
   );

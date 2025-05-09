@@ -1,4 +1,4 @@
-﻿import { Balance, BlobModel, MoveObject, Table, Uid } from "./shared-models";
+﻿import { Balance, BlobModel, MoveObject, Uid } from "./shared-models";
 
 export const errorMessages: Record<string, Record<number, string>> = {
     vault: {
@@ -25,7 +25,6 @@ export interface DataPointModel {
 export interface CapturModel {
     id: Uid;
     vault: MoveObject<VaultModel>;
-    state: MoveObject<StateModel>;
     price_per_epoch: number
 }
 
@@ -33,12 +32,8 @@ export interface VaultModel{
     balance: Balance
 }
 
-export interface StateModel {
-    subscriptions: MoveObject<Table>;
-}
-
 export interface SubscriptionModel {
-    address: string;
+    id: Uid;
     start_epoch: number;
     end_epoch: number;
 }

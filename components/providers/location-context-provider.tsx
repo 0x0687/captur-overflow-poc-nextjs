@@ -7,7 +7,7 @@ import React, {
     useContext,
     ReactNode,
 } from 'react'
-import { encryptSessionUsingSeal, uploadSessionAction } from '@/app/actions';
+import { encryptSessionUsingSeal, uploadEncryptedSessionAction } from '@/app/actions';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 
 // Define data shapes
@@ -42,6 +42,8 @@ interface LocationContextProps {
     resumeRecording: () => void
     stopRecording: () => void
     uploadSession: (sessionId: string) => Promise<void>   // new action
+    encryptSession: (sessionId: string) => Promise<void> // new action
+    isEncrypting: boolean
 }
 
 // Create context
@@ -146,8 +148,16 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
         if (!session) return
         try {
             setIsUploading(true)
-            const file = new Blob([JSON.stringify(session.locations)], { type: 'application/json' })
-            const blobId = await uploadSessionAction(file, currentAccount?.address || '');
+            const encrypted = session.encryptedBytes;
+            if (!encrypted) {
+                console.error('Session not encrypted')
+                return
+            }
+            if (!currentAccount?.address) {
+                console.error('Account not found')
+                return
+            }
+            const blobId = await uploadEncryptedSessionAction(encrypted, currentAccount.address);
 
             if (blobId) {
                 // Update session state
@@ -188,9 +198,10 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
             console.error('Upload error:', error)
             alert('Failed to upload session')
         } finally {
-            setIsUploading(false)
+            setIsEncrypting(false)
         }
     }
+
 
     return (
         <LocationContext.Provider
@@ -204,7 +215,9 @@ export const LocationProvider = ({ children }: { children: ReactNode }) => {
                 resumeRecording,
                 stopRecording,
                 uploadSession,
-                isUploading
+                isUploading,
+                encryptSession,
+                isEncrypting,
             }}
         >
             {children}

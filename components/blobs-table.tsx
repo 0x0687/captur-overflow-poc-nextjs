@@ -8,13 +8,13 @@ import { useCurrentAccount, useSignTransaction } from '@mysten/dapp-kit'
 import { BlobModel } from '@/api/models/shared-models'
 import { formatAddress, generateObjectLink, u256ToBase64Url } from '@/lib/utils'
 import { useLocation } from './providers/location-context-provider'
-import { aggregatorClient } from '@/api/aggregator/aggregator-client'
 import { buildSubmitDataTransaction, executeAndWaitForTransactionBlock } from '@/app/actions'
 import { useLocationTrackerSettings } from './providers/tracker-settings-provider'
 import { Transaction } from '@mysten/sui/transactions'
 import { toast } from 'sonner'
 import { useBlobPopup } from './providers/blob-popup-provider'
 import { getCurrentWalrusEpoch } from '@/api/queries/epoch'
+import { downloadBlob } from '@/api/aggregator/download-blob'
 
 
 export function BlobsTable() {
@@ -148,11 +148,18 @@ export function BlobsTable() {
 
     const readBlob = async (blobId: string) => {
         setIsReading(true);
-        const response = await aggregatorClient.routes.getBlob({
-            blobId: blobId,
-        });
+        const response = await downloadBlob(blobId);
+        if (!response) {
+            console.error("Failed to download blob");
+            toast.error("Failed to download blob");
+            setIsReading(false);
+            return;
+        }
         setIsReading(false);
-        openJsonPopup(response);
+
+        const bytes = await response.arrayBuffer();
+        const text = new TextDecoder().decode(bytes)
+        openJsonPopup(text);
     };
 
     return (

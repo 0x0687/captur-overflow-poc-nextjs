@@ -14,15 +14,20 @@ import { generateObjectLink } from "@/lib/explorer-link-formatter"
 import { BlobSubmissionDto, fetchDataPointsByIds, getRecentlyAddedDataPoints } from "@/api/queries/data-points"
 import { formatAddress, u256ToBase64Url } from "@/lib/utils"
 import { DataPointModel } from "@/api/models/captur-models"
-import { aggregatorClient } from "@/api/aggregator/aggregator-client"
 import { useBlobPopup } from "./providers/blob-popup-provider"
 import { useCurrentAccount, useSignTransaction } from "@mysten/dapp-kit"
 import { useAdminContext } from "./providers/admin-context-provider"
-import { buildApproveDataTransaction, executeAndWaitForTransactionBlock } from "@/app/actions"
+import { buildApproveDataTransaction, buildDecryptUnprocessedBlobUsingSealTx, executeAndWaitForTransactionBlock } from "@/app/actions"
 import { Transaction } from "@mysten/sui/transactions"
 import { toast } from "sonner"
 import { handleError } from "@/lib/error-messages"
 import { useBalance } from "./providers/balance-provider"
+import { useSealSession } from "./providers/seal-session-provider"
+import { EncryptedObject } from "@mysten/seal"
+import { currentPackageId } from "@/api/constants"
+import { downloadBlob } from "@/api/aggregator/download-blob"
+import { getClientSealClient } from "@/api/seal-client."
+import { fromHex } from "@mysten/bcs"
 
 interface CombinedSubmission {
     submission: BlobSubmissionDto;
@@ -33,20 +38,84 @@ export function VerificationTable() {
     const [combined, setCombined] = useState<CombinedSubmission[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isReading, setIsReading] = useState(false);
-    const { openBlobPopup: openJsonPopup } = useBlobPopup();
+    const { openBlobPopup } = useBlobPopup();
     const currentAccount = useCurrentAccount();
     const { processingCap } = useAdminContext();
     const { mutate: signTransaction } = useSignTransaction();
-    const {updateBalance} = useBalance();
+    const { updateBalance } = useBalance();
+    const { sessionKey } = useSealSession();
 
     const readBlob = async (blobId: string) => {
         setIsReading(true);
-        const response = await aggregatorClient.routes.getBlob({
-            blobId: blobId,
-        });
+        const response = await downloadBlob(blobId);
+        if (!response) {
+            console.error("Failed to download blob");
+            toast.error("Failed to download blob");
+            setIsReading(false);
+            return;
+        }
         setIsReading(false);
-        openJsonPopup(response);
+
+        const bytes = await response.arrayBuffer();
+        const text = new TextDecoder().decode(bytes)
+
+        openBlobPopup(text);
     };
+
+    const readAndDecryptBlob = async (blobId: string, dataPointId: string) => {
+        try {
+            setIsReading(true);
+
+            if (!sessionKey) {
+                console.error("Session key not found");
+                return;
+            }
+            if (!processingCap) {
+                console.error("Admin cap not found");
+                return;
+            }
+
+            const response = await downloadBlob(blobId);
+            if (!response) {
+                console.error("Failed to download blob");
+                toast.error("Failed to download blob");
+                setIsReading(false);
+                return;
+            }
+
+            const bytes = await response.arrayBuffer();
+            const byteArray = new Uint8Array(bytes);
+            const encryptedObject = EncryptedObject.parse(byteArray);
+            if (encryptedObject.packageId !== currentPackageId) {
+                throw new Error("Encrypted object package ID does not match");
+            }
+            const sealId = fromHex(encryptedObject.id);
+            const txBytes = await buildDecryptUnprocessedBlobUsingSealTx(
+                sealId,
+                processingCap.id.id,
+                dataPointId
+            );
+            const sealClient = getClientSealClient();
+            const decryptedBytes = await sealClient.decrypt({
+                data: byteArray,
+                sessionKey,
+                txBytes,
+            });
+            setIsReading(false);
+
+            const decodedText = new TextDecoder().decode(decryptedBytes);
+            openBlobPopup(decodedText);
+        }
+        catch (err) {
+            console.error("Failed to decrypt blob:", err);
+            toast.error("Failed to decrypt blob: " + blobId);
+        }
+        finally {
+            setIsReading(false);
+        }
+
+    }
+
 
     const loadAll = async () => {
         try {
@@ -179,7 +248,7 @@ export function VerificationTable() {
                 <TableBody>
                     {combined.map((c) => {
                         const { digest, timestamp, event } = c.submission
-                        const { status, blob } = c.dataPoint;
+                        const { status, blob, sender } = c.dataPoint;
                         const link = generateObjectLink(event.capture_id)
                         const encoded = u256ToBase64Url(blob.fields.blob_id);
                         console.log(encoded);
@@ -197,7 +266,7 @@ export function VerificationTable() {
                                     </a>
                                 </TableCell>
                                 <TableCell className="hidden md:table-cell">
-                                    {formatAddress(event.sender)}
+                                    {formatAddress(sender)}
                                 </TableCell>
                                 <TableCell className="hidden md:table-cell">
                                     {new Date(timestamp).toLocaleString()}
@@ -220,6 +289,16 @@ export function VerificationTable() {
                                         }}
                                     >
                                         Read
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        disabled={isReading || !sessionKey || !processingCap}
+                                        size="sm"
+                                        onClick={() => {
+                                            readAndDecryptBlob(encoded, event.capture_id)
+                                        }}
+                                    >
+                                        Read and Decrypt
                                     </Button>
                                 </TableCell>
                             </TableRow>
