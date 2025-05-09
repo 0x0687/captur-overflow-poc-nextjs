@@ -14,7 +14,6 @@ interface CapturContextValue {
 const CapturContext = createContext<CapturContextValue>({
   captur: undefined,
   loading: true,
-  error: undefined,
 });
 
 // Provider props interface
@@ -26,7 +25,6 @@ interface CapturProviderProps {
 export const CapturProvider: React.FC<CapturProviderProps> = ({ children }) => {
   const [captur, setCaptur] = useState<CapturModel | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | undefined>(undefined);
 
   useEffect(() => {
     // Fetch the Captur instance when the provider mounts
@@ -47,7 +45,7 @@ export const CapturProvider: React.FC<CapturProviderProps> = ({ children }) => {
   }, []);
 
   return (
-    <CapturContext.Provider value={{ captur, loading, error }}>
+    <CapturContext.Provider value={{ captur, loading }}>
       {children}
     </CapturContext.Provider>
   );
