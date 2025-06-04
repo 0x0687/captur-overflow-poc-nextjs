@@ -14,7 +14,7 @@
     "@hookform/resolvers": "^5.0.1",
     "@mysten/bcs": "^1.6.1",
     "@mysten/dapp-kit": "^0.15.2",
-    "@mysten/seal": "^0.4.2",
+    "@mysten/seal": "^0.4.6",
     "@mysten/sui": "^1.29.0",
     "@mysten/walrus": "^0.0.20",
     "@radix-ui/react-dialog": "^1.1.11",
