@@ -11,7 +11,10 @@ export const getSealClient = () => {
 
     return new SealClient({
         suiClient,
-        serverObjectIds: getAllowlistedKeyServers(network),
+        serverConfigs: getAllowlistedKeyServers(network).map((server) => ({
+            objectId: server,
+            weight: 1,
+        })),
         verifyKeyServers: false,
     })
 }
@@ -26,7 +29,10 @@ export const getClientSealClient = () => {
 
     return new SealClient({
         suiClient,
-        serverObjectIds: getAllowlistedKeyServers(network),
+        serverConfigs: getAllowlistedKeyServers(network).map((server) => ({
+            objectId: server,
+            weight: 1,
+        })),
         verifyKeyServers: false,
     });
 }
