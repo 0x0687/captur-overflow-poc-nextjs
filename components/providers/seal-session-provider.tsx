@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { SessionKey } from '@mysten/seal';         // adjust import path to your SDK
 import { useCurrentAccount, useSignPersonalMessage } from '@mysten/dapp-kit';
 import { currentPackageId } from '@/api/constants';
+import { getClientSuiClient } from '@/api/sui-client';
 
 // Define the shape of our context
 interface SessionContextProps {
@@ -20,6 +21,7 @@ export const SealSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const [sessionKey, setSessionKey] = useState<SessionKey | null>(null);
     const [initializing, setInitializing] = useState(false); // New state to track initialization
     const currentAccount = useCurrentAccount();
+    const suiClient = getClientSuiClient();
     const { mutate: signPersonalMessage } = useSignPersonalMessage();
 
     useEffect(() => {
@@ -41,6 +43,7 @@ export const SealSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 address: currentAccount.address,
                 packageId: currentPackageId,
                 ttlMin: 10,
+                suiClient
             });
 
             // 2. Get the message that needs signing
