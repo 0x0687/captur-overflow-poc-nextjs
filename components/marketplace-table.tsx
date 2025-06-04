@@ -172,7 +172,6 @@ export function MarketplaceTable() {
                         const { blob, age_range, gender } = c.dataPoint;
                         const link = generateObjectLink(event.capture_id)
                         const encoded = u256ToBase64Url(blob.fields.blob_id);
-                        console.log(encoded);
 
                         return (
                             <TableRow key={digest}>
